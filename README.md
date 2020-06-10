@@ -10,7 +10,47 @@ Decoding is conditioned on a dynamic window of segments, instead of an entire ut
 This repository also maintains the audio-visual alignment and fusion strategy AV Align [2,3] currently implemented with the Transformer stacks instead of the original recurrent networks [4]
 
 
+### Overview
+To decode online, Taris learns to count the number of words in a spoken sentence. As we show in [1], 
+this task facilitates the partitioning of the speech input into segments that can be decoded eagerly.
+However, a longer context is needed in order to match the accuracy of an offline system.
+
+The figure below illustrates an example where the decoder uses two look-back and look-ahead segments
+to condition all the characters within a given word in the output modality.
+
+![diagram](./img/taris.png)
+
+Once all the characters in `decision` are processed and the system predicts a blank space token,
+the attention distribution advances by one more segment, and is used in computing audio context vectors
+for every character in the next word `away`.
+
+
+![diagram](./img/taris2.png)
+
+
 ### How to use
+
+##### Launch scripts
+The script `run_audio.py` launches audio-only experiments.\
+Relevant system flags are:
+
++ `--transformer_online_encoder (default: False)`
++ `--transformer_encoder_lookahead (default: 11)`
++ `--transformer_encoder_lookback (default: 11)`
++ `--transformer_online_decoder (default: False)`
++ `--transformer_decoder_lookahead (default: 5)`
++ `--transformer_decoder_lookback (default: 5)`
+
+The script `run_audiovisual.py` launches audio-visual experiments implementing the AV Align strategy with a Transformer,
+reproducing the work in [4]. By default, the Action Unit regularisation loss, controlled by the `--au_loss` flag,
+is set to `False`.
+
+##### Data preparation
+
+This project currently depends on the Tensorflow 1.x based [AVSR-tf1](https://github.com/georgesterpu/avsr-tf1)
+repository to generate the input .tfrecord files. We are in the process of porting the data preparation pipeline
+to a lighter library to simplify the experimentation with Taris.
+
 
 ### References
 
@@ -34,8 +74,8 @@ Exploring the Transformer architecture for Audio-Visual Speech Recognition \
 George Sterpu, Christian Saam, Naomi Harte\
 Under review\
 [pdf](https://arxiv.org/pdf/2005.09297.pdf)
+
 ### Dependencies
 ```
-tensorflow
+tensorflow >= 2.0
 ```
-

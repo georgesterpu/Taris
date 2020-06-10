@@ -8,12 +8,12 @@ FLAGS = flags.FLAGS
 def main(argv):
 
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu_id
-    records_path = '/run/media/john_tukey/download/datasets/lrs2/tfrecords/'
+    records_path = './data/'
 
     video_train_record = records_path + 'rgb36lips_train_success_aus.tfrecord'
     video_test_record = records_path + 'rgb36lips_test_success_aus.tfrecord'
-    labels_train_record = records_path + 'characters_train_success_fixed_22jan.tfrecord'
-    labels_test_record = records_path + 'characters_test_success_fixed_22jan.tfrecord'
+    labels_train_record = records_path + 'characters_train_success.tfrecord'
+    labels_test_record = records_path + 'characters_test_success.tfrecord'
 
     audio_train_records = (
         records_path + 'logmel_train_success_clean.tfrecord',
