@@ -57,23 +57,23 @@ to a lighter library to simplify the experimentation with Taris.
 [1] Learning to Count Words in Fluent Speech enables Online Speech Recognition\
 George Sterpu, Christian Saam, Naomi Harte\
 Under review\
-[pdf](https://github.com/georgesterpu/georgesterpu.github.io/raw/master/papers/gg2020.pdf)
+[[arXiv](https://arxiv.org/abs/2006.04928)]
 
 [2] How to Teach DNNs to Pay Attention to the Visual Modality in Speech Recognition\
 George Sterpu, Christian Saam, Naomi Harte\
 IEEE/ACM Transactions on Audio, Speech, and Language Processing, 2020\
-[pdf accepted version](https://raw.githubusercontent.com/georgesterpu/georgesterpu.github.io/master/papers/taslp2020.pdf) [IEEE version](https://ieeexplore.ieee.org/document/9035650)
+[ [pdf accepted version](https://raw.githubusercontent.com/georgesterpu/georgesterpu.github.io/master/papers/taslp2020.pdf) ] [[IEEE version](https://ieeexplore.ieee.org/document/9035650)]
 
 [3] Attention-based Audio-Visual Fusion for Robust Automatic Speech Recognition\
 George Sterpu, Christian Saam, Naomi Harte\
-in ICMI 2018
-[pdf](https://arxiv.org/pdf/1809.01728.pdf)
+in ICMI 2018\
+[[arXiv](https://arxiv.org/abs/1809.01728)]
 
 [4] Should we hard-code the recurrence concept or learn it instead ?
 Exploring the Transformer architecture for Audio-Visual Speech Recognition \
 George Sterpu, Christian Saam, Naomi Harte\
 Under review\
-[pdf](https://arxiv.org/pdf/2005.09297.pdf)
+[[arXiv](https://arxiv.org/abs/2005.09297)]
 
 ### Dependencies
 ```
