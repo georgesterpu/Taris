@@ -67,7 +67,7 @@ class Transformer(tf.keras.Model):
 
     def build(self, input_shape):
         self.input_dense_layer = tf.keras.layers.Dense(units=FLAGS.transformer_hidden_size)
-        if FLAGS.word_loss:
+        if FLAGS.word_loss or FLAGS.transformer_online_decoder:
             self.gate = tf.keras.layers.Dense(1, activation=self.wb_activation)
 
     def call(self, inputs, training):
@@ -113,7 +113,7 @@ class Transformer(tf.keras.Model):
             # Generate output sequence if targets is None, or return logits if target
             # sequence is known.
 
-            if FLAGS.word_loss:
+            if FLAGS.word_loss or FLAGS.transformer_online_decoder:
                 word_sig = self.gate(encoder_outputs)
 
                 word_loss = num_words_loss(
@@ -634,7 +634,7 @@ class AVTransformer(tf.keras.Model):
         if self.use_au_loss:
             self.au_layer = tf.keras.layers.Dense(units=2, activation='sigmoid')
             self.mse = tf.keras.losses.MeanSquaredError()
-        if self.use_word_loss:
+        if self.use_word_loss or FLAGS.transformer_online_decoder:
             self.gate = tf.keras.layers.Dense(1, activation='sigmoid')
 
     def call(self, inputs, training):
@@ -709,7 +709,7 @@ class AVTransformer(tf.keras.Model):
                 attention_bias=video_attention_bias,
                 training=training)
 
-            if self.use_word_loss:
+            if self.use_word_loss or FLAGS.transformer_online_decoder:
                 word_sig = self.gate(fused_encoder_outputs)
 
                 word_loss = num_words_loss(
