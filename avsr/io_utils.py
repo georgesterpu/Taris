@@ -1,6 +1,8 @@
 import tensorflow as tf
 import collections
 from absl import flags
+from os import path
+from random import shuffle
 
 FLAGS = flags.FLAGS
 
@@ -333,3 +335,15 @@ def advance_iterator(iterator):
         is_done = True
 
     return batch, is_done
+
+
+def get_files(file_list, dataset_dir, shuffle_sentences=False):
+    with open(file_list, 'r') as f:
+        contents = f.read().splitlines()
+
+    contents = [path.join(dataset_dir, line.split()[0]) for line in contents]
+
+    if shuffle_sentences is True:
+        shuffle(contents)
+
+    return contents

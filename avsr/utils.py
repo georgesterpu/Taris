@@ -11,7 +11,7 @@ def avsr_flags():
     flags.DEFINE_integer('embedding_size', 128, 'Embedding dimension')
     flags.DEFINE_integer('beam_width', 10, 'Beam Width')
     flags.DEFINE_boolean('enable_function', False, 'Enable Function?')
-    flags.DEFINE_string('architecture', 'unimodal', 'Network Architecture')
+    flags.DEFINE_string('architecture', 'transformer', 'Network Architecture')
     flags.DEFINE_string('gpu_id', '0', 'GPU index')
 
     flags.DEFINE_integer('noise_level', 0, 'Noise level in range {0, 1, 2, 3}')

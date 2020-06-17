@@ -8,6 +8,7 @@ FLAGS = flags.FLAGS
 def main(argv):
 
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu_id
+    FLAGS.architecture = 'transformer'
     records_path = './data/'
 
     labels_train_record = records_path + 'characters_test_success.tfrecord'

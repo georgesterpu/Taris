@@ -34,6 +34,9 @@ for every character in the next word `away`.
 The script `run_audio.py` launches audio-only experiments.\
 Relevant system flags are:
 
++ `--architecture (default: transformer)`
+
+
 + `--transformer_online_encoder (default: False)`
 + `--transformer_encoder_lookahead (default: 11)`
 + `--transformer_encoder_lookback (default: 11)`
@@ -43,14 +46,14 @@ Relevant system flags are:
 
 The script `run_audiovisual.py` launches audio-visual experiments implementing the AV Align strategy with a Transformer,
 reproducing the work in [4]. By default, the Action Unit regularisation loss, controlled by the `--au_loss` flag,
-is set to `False`.
+is set to `False`. Please ensure that `--architecture=av_transformer`.
 
 ##### Data preparation
 
-This project currently depends on the Tensorflow 1.x based [AVSR-tf1](https://github.com/georgesterpu/avsr-tf1)
-repository to generate the input .tfrecord files. We are in the process of porting the data preparation pipeline
-to a lighter library to simplify the experimentation with Taris.
+Please see the example script `write_records.py`
 
+For AVSR experiments it is required to process your video clips in advance with the TadasBaltrusaitis/OpenFace tool.
+Please refer to the example script `extract_faces.py`.
 
 ### References
 
@@ -78,4 +81,15 @@ Under review\
 ### Dependencies
 ```
 tensorflow >= 2.0
+tensorflow_addons
+matplotlib
+```
+For data preparation:
+```
+librosa
+imageio
+
+cv2 (AVSR)
+
+TadasBaltrusaitis/OpenFace (AVSR)
 ```
