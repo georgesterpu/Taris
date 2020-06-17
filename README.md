@@ -1,5 +1,5 @@
 # Taris
-Transformer-based online speech recognition system with TensorFlow 2.0
+Transformer-based online speech recognition system with TensorFlow 2
 
 ### About
 
@@ -35,8 +35,6 @@ The script `run_audio.py` launches audio-only experiments.\
 Relevant system flags are:
 
 + `--architecture (default: transformer)`
-
-
 + `--transformer_online_encoder (default: False)`
 + `--transformer_encoder_lookahead (default: 11)`
 + `--transformer_encoder_lookback (default: 11)`
@@ -87,9 +85,7 @@ matplotlib
 For data preparation:
 ```
 librosa
-imageio
-
+imageio (AVSR)
 cv2 (AVSR)
-
 TadasBaltrusaitis/OpenFace (AVSR)
 ```
