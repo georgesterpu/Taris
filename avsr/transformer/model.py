@@ -717,7 +717,7 @@ class AVTransformer(tf.keras.Model):
                     targets,
                     self.SPACE_ID
                 )
-                self.add_loss(FLAGS.experimental_wordloss_weight * word_loss)
+                self.add_loss(FLAGS.wordloss_weight * word_loss)
 
                 extra = {'word_logits': word_sig,
                          'word_floor_cumsum': tf.floor(tf.math.cumsum(word_sig, axis=1))}
