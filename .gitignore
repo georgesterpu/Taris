@@ -1,0 +1,8 @@
+*.pyc
+/checkpoints/*
+/logs/*
+/predictions/*
+/.idea/*
+**/*.pyc
+/results/*
+
