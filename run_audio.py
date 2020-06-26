@@ -11,11 +11,11 @@ def main(argv):
     FLAGS.architecture = 'transformer'
     records_path = './data/'
 
-    labels_train_record = records_path + 'characters_test_success.tfrecord'
+    labels_train_record = records_path + 'characters_train_success.tfrecord'
     labels_test_record = records_path + 'characters_test_success.tfrecord'
 
     audio_train_records = (
-        records_path + 'logmel_test_success_clean.tfrecord',
+        records_path + 'logmel_train_success_clean.tfrecord',
         records_path + 'logmel_train_success_cafe_10db.tfrecord',
         records_path + 'logmel_train_success_cafe_0db.tfrecord',
         records_path + 'logmel_train_success_cafe_-5db.tfrecord'
