@@ -669,14 +669,15 @@ class AVTransformer(Transformer):
         video_len, audio_len = inputs.inputs_length
         targets, targets_length = inputs.labels, inputs.labels_length
 
-
-        # Variance scaling is used here because it seems to work in many problems.
-        # Other reasonable initializers may also work just as well.
         with tf.name_scope("AVTransformer"):
 
             # Step 1 : encode Video frames
             encoded_video_frames = self.video_cnn(video_input, training=training)
-            video_attention_bias = get_bias_from_len(video_len)
+            video_attention_bias = get_bias_from_len(
+                video_len,
+                online=FLAGS.transformer_online_encoder,
+                lookahead=FLAGS.transformer_encoder_lookahead,
+                lookback=FLAGS.transformer_encoder_lookback)
 
             video_encoder_outputs = self.encode(
                 inputs=encoded_video_frames,
@@ -702,7 +703,12 @@ class AVTransformer(Transformer):
             # Step 2: encode Audio features
             audio_encoder_inputs = self.input_dense_layer(audio_input)
 
-            audio_attention_bias = get_bias_from_len(audio_len)
+            audio_attention_bias = get_bias_from_len(
+                audio_len,
+                online=FLAGS.transformer_online_encoder,
+                lookahead=FLAGS.transformer_encoder_lookahead,
+                lookback=FLAGS.transformer_encoder_lookback)
+
             audio_encoder_outputs = self.encode(
                 inputs=audio_encoder_inputs,
                 encoder_stack=self.audio_encoder_stack,
