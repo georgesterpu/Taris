@@ -96,7 +96,7 @@ class Attention(tf.keras.layers.Layer):
         # for numeric stability. When training with float16, we keep the input
         # and output in float16 for better performance.
         weights = tf.nn.softmax(logits, name="attention_weights")
-        weights = tf.where(bias != -1e9, weights, tf.zeros_like(weights))
+        weights = tf.where(bias > -1e9, weights, tf.zeros_like(weights))
         if FLAGS.plot_alignments is True:
             tf.summary.image(name=self.name, data=tf.expand_dims(tf.squeeze(weights, 1), -1), step=1, max_outputs=1)
         if training:
