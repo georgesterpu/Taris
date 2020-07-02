@@ -288,7 +288,7 @@ class SequenceBeamSearch(object):
 
         spaces = tf.cast(tf.equal(new_seq, 1), tf.float32)
         num_words = tf.reduce_sum(spaces, axis=-1)
-        target_words = state[_StateKeys.ALIVE_CACHE]["num_estimated_words"]
+        target_words = state[_StateKeys.ALIVE_CACHE]["target_words"]
         target_words_tiled = tf.concat([target_words, target_words], axis=1)
         new_finished_flags = num_words >= target_words_tiled
 

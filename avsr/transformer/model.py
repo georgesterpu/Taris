@@ -53,10 +53,15 @@ class Transformer(tf.keras.Model):
         self.vocab_size = len(self.unit_dict) - 1
         self.SPACE_ID = self.reverse_dict[' ']
 
+        self.use_word_loss = FLAGS.word_loss
+
         self.embedding_softmax_layer = EmbeddingSharedWeights(
             self.vocab_size, FLAGS.transformer_hidden_size)
-        self.encoder_stack = EncoderStack()
-        self.decoder_stack = DecoderStack()
+
+        if FLAGS.architecture == 'transformer':
+            # is it worth it to specialise this class for single input modalities ?
+            self.encoder_stack = EncoderStack()
+            self.decoder_stack = DecoderStack()
 
         if FLAGS.wb_activation == 'sigmoid':
             self.wb_activation = tf.math.sigmoid
@@ -67,7 +72,7 @@ class Transformer(tf.keras.Model):
 
     def build(self, input_shape):
         self.input_dense_layer = tf.keras.layers.Dense(units=FLAGS.transformer_hidden_size)
-        if FLAGS.word_loss or FLAGS.transformer_online_decoder:
+        if self.use_word_loss or FLAGS.transformer_online_decoder:
             self.gate = tf.keras.layers.Dense(1, activation=self.wb_activation)
 
     def call(self, inputs, training):
@@ -109,11 +114,11 @@ class Transformer(tf.keras.Model):
 
             # Run the inputs through the encoder layer to map the symbol
             # representations to continuous representations.
-            encoder_outputs = self.encode(encoder_inputs, attention_bias, training)
+            encoder_outputs = self.encode(encoder_inputs, self.encoder_stack, attention_bias, training)
             # Generate output sequence if targets is None, or return logits if target
             # sequence is known.
 
-            if FLAGS.word_loss or FLAGS.transformer_online_decoder:
+            if self.use_word_loss or FLAGS.transformer_online_decoder:
                 word_sig = self.gate(encoder_outputs)
 
                 word_loss = num_words_loss(
@@ -147,15 +152,20 @@ class Transformer(tf.keras.Model):
                 return logits, extra
             else:
                 if FLAGS.transformer_online_decoder:
-                    bias_or_cumsum = word_fcumsum  # improper name
+                    bias = None
                 else:
-                    bias_or_cumsum = get_bias_from_len(encoder_inputs_length)
+                    word_fcumsum = None
+                    bias = get_bias_from_len(encoder_inputs_length)
 
-                word_cnt = tf.math.cumsum(tf.cast(tf.equal(targets, self.SPACE_ID), tf.float32), axis=1)[:,-1]
-                output = self.predict(encoder_outputs, encoder_inputs_length, (bias_or_cumsum, word_cnt), training)
+                num_target_words = tf.math.cumsum(tf.cast(tf.equal(targets, self.SPACE_ID), tf.float32), axis=1)[:,-1]
+                output = self.predict(
+                    encoder_outputs, encoder_inputs_length, training,
+                    encoder_decoder_attention_bias=bias,
+                    word_fcumsum=word_fcumsum,
+                    target_words=num_target_words)
                 return output, extra
 
-    def encode(self, inputs, attention_bias, training):
+    def encode(self, inputs, encoder_stack, attention_bias, training):
         """Generate continuous representation for inputs.
 
         Args:
@@ -188,7 +198,7 @@ class Transformer(tf.keras.Model):
                 encoder_inputs = tf.nn.dropout(
                     encoder_inputs, rate=FLAGS.transformer_layer_postprocess_dropout)
 
-            return self.encoder_stack(
+            return encoder_stack(
                 encoder_inputs, attention_bias, inputs_padding, training=training)
 
     def decode(self, targets, encoder_outputs, attention_bias, training):
@@ -273,21 +283,17 @@ class Transformer(tf.keras.Model):
 
             self_attention_bias = decoder_self_attention_bias[:, :, i:i + 1, :i + 1]
 
-            ## online edit
-            bias_or_cumsum = cache.get("encoder_decoder_attention_bias")  # using improper name
-
             if FLAGS.transformer_online_decoder:
                 timestep_bias = get_online_decoder_bias(
                     ids,
                     self.SPACE_ID,
-                    encoder_fcumsum=bias_or_cumsum,
+                    encoder_fcumsum=cache.get("word_fcumsum"),
                     length_mask=cache.get("input_mask"),
                     lookahead=FLAGS.transformer_decoder_lookahead,
                     lookback=FLAGS.transformer_decoder_lookback,
                 )
             else:
-                timestep_bias = bias_or_cumsum
-            ##
+                timestep_bias = cache.get("encoder_decoder_attention_bias")
 
             decoder_outputs = self.decoder_stack(
                 decoder_input,
@@ -302,13 +308,16 @@ class Transformer(tf.keras.Model):
 
         return symbols_to_logits_fn
 
-    def predict(self, encoder_outputs, encoder_output_length, encoder_decoder_attention_bias, training):
+    def predict(self, encoder_outputs, encoder_output_length, training,
+                target_words,
+                encoder_decoder_attention_bias=None,
+                word_fcumsum=None,
+                ):
         """Return predicted sequence."""
         encoder_outputs = tf.cast(encoder_outputs, FLAGS.transformer_dtype)
         batch_size = tf.shape(encoder_outputs)[0]
         input_length = tf.shape(encoder_outputs)[1]
         max_decode_length = input_length + FLAGS.transformer_extra_decode_length
-        attention_bias = tf.cast(encoder_decoder_attention_bias[0], FLAGS.transformer_dtype)
 
         symbols_to_logits_fn = self._get_symbols_to_logits_fn(
             max_decode_length, training)
@@ -339,9 +348,13 @@ class Transformer(tf.keras.Model):
 
         # Add encoder output and attention bias to the cache.
         cache["encoder_outputs"] = encoder_outputs
-        cache["encoder_decoder_attention_bias"] = attention_bias
-        cache["input_mask"] = tf.expand_dims(tf.sequence_mask(encoder_output_length), -1)
-        cache["num_estimated_words"] = encoder_decoder_attention_bias[1]
+        cache["target_words"] = target_words
+
+        if FLAGS.transformer_online_decoder:
+            cache["input_mask"] = tf.expand_dims(tf.sequence_mask(encoder_output_length), -1)
+            cache["word_fcumsum"] = word_fcumsum
+        else:
+            cache["encoder_decoder_attention_bias"] = tf.cast(encoder_decoder_attention_bias, FLAGS.transformer_dtype)
 
         # Use beam search to find the top beam_size sequences and scores.
         decoded_ids, scores = sequence_beam_search(
@@ -603,23 +616,19 @@ class AlignStack(tf.keras.layers.Layer):
         return self.output_normalization(audio_memory)
 
 
-class AVTransformer(tf.keras.Model):
+class AVTransformer(Transformer):
     def __init__(self, unit_dict, name=None):
         """Initialize layers to build Transformer model.
         Args:
           name: name of the model.
         """
-        super(AVTransformer, self).__init__(name=name)
-        self.unit_dict = unit_dict
-        self.reverse_dict = {v: k for k, v in self.unit_dict.items()}
-        self.vocab_size = len(self.unit_dict) - 1
-        self.SPACE_ID = self.reverse_dict[' ']
+        super(AVTransformer, self).__init__(unit_dict=unit_dict, name=name)
 
         self.use_au_loss = FLAGS.au_loss
-        self.use_word_loss = FLAGS.word_loss
 
-        self.embedding_softmax_layer = EmbeddingSharedWeights(
-            self.vocab_size, FLAGS.transformer_hidden_size)
+        # The super class won't instantiate its encode/decode stacks
+        # but maybe there is a better design without overdoing abstractions
+        # e.g. can these be moved to build() ?
         self.audio_encoder_stack = EncoderStack()
         self.video_encoder_stack = EncoderStack()
         self.video_cnn = VideoCNN(
@@ -658,7 +667,8 @@ class AVTransformer(tf.keras.Model):
         """
         video_input, audio_input = inputs.inputs
         video_len, audio_len = inputs.inputs_length
-        targets = inputs.labels
+        targets, targets_length = inputs.labels, inputs.labels_length
+
 
         # Variance scaling is used here because it seems to work in many problems.
         # Other reasonable initializers may also work just as well.
@@ -719,202 +729,39 @@ class AVTransformer(tf.keras.Model):
                 )
                 self.add_loss(FLAGS.wordloss_weight * word_loss)
 
+                word_fcumsum = fcumsum(word_sig)
                 extra = {'word_logits': word_sig,
-                         'word_floor_cumsum': tf.floor(tf.math.cumsum(word_sig, axis=1))}
+                         'word_floor_cumsum': word_fcumsum}
             else:
                 extra = {}
 
             if training:
-                logits = self.decode(targets, fused_encoder_outputs, audio_attention_bias, training)
-                return logits, tf.zeros(0)
+                if FLAGS.transformer_online_decoder:
+                    attention_bias = get_bias_from_boundary_signal(
+                        word_sig,
+                        audio_len,
+                        targets,
+                        targets_length,
+                        self.SPACE_ID,
+                        lookahead=FLAGS.transformer_decoder_lookahead,
+                        lookback=FLAGS.transformer_decoder_lookback,
+                    )
+                else:
+                    attention_bias = get_bias_from_len(audio_len)
+
+                logits = self.decode(targets, fused_encoder_outputs, attention_bias, training)
+                return logits, extra
             else:
-                output = self.predict(fused_encoder_outputs, audio_attention_bias, training)
+                if FLAGS.transformer_online_decoder:
+                    bias = None
+                else:
+                    bias = get_bias_from_len(audio_len)
+                    word_fcumsum = None
+
+                num_target_words = tf.math.cumsum(tf.cast(tf.equal(targets, self.SPACE_ID), tf.float32), axis=1)[:, -1]
+                output = self.predict(
+                    fused_encoder_outputs, audio_len, training,
+                    encoder_decoder_attention_bias=bias,
+                    word_fcumsum=word_fcumsum,
+                    target_words=num_target_words)
                 return output, extra
-
-    def encode(self, inputs, encoder_stack, attention_bias, training):
-        """Generate continuous representation for inputs.
-
-        Args:
-          inputs: int tensor with shape [batch_size, input_length].
-          attention_bias: float tensor with shape [batch_size, 1, 1, input_length].
-          training: boolean, whether in training mode or not.
-
-        Returns:
-          float tensor with shape [batch_size, input_length, hidden_size]
-        """
-        with tf.name_scope("encode"):
-            # Prepare inputs to the layer stack by adding positional encodings and
-            # applying dropout.
-
-            # embedded_inputs = self.embedding_softmax_layer(inputs)
-            embedded_inputs = inputs
-            embedded_inputs = tf.cast(embedded_inputs, FLAGS.transformer_dtype)
-
-            inputs_padding = get_padding(inputs)
-            attention_bias = tf.cast(attention_bias, FLAGS.transformer_dtype)
-
-            with tf.name_scope("add_pos_encoding"):
-                _, input_length, input_size = tf.unstack(tf.shape(embedded_inputs))
-                pos_encoding = get_position_encoding(
-                    input_length, input_size)
-                pos_encoding = tf.cast(pos_encoding, FLAGS.transformer_dtype)
-                encoder_inputs = embedded_inputs + pos_encoding
-
-            if training:
-                encoder_inputs = tf.nn.dropout(
-                    encoder_inputs, rate=FLAGS.transformer_layer_postprocess_dropout)
-
-            return encoder_stack(
-                encoder_inputs, attention_bias, inputs_padding, training=training)
-
-    def decode(self, targets, encoder_outputs, attention_bias, training):
-        """Generate logits for each value in the target sequence.
-
-        Args:
-          targets: target values for the output sequence. int tensor with shape
-            [batch_size, target_length]
-          encoder_outputs: continuous representation of input sequence. float tensor
-            with shape [batch_size, input_length, hidden_size]
-          attention_bias: float tensor with shape [batch_size, 1, 1, input_length]
-          training: boolean, whether in training mode or not.
-
-        Returns:
-          float32 tensor with shape [batch_size, target_length, vocab_size]
-        """
-        with tf.name_scope("decode"):
-            # Prepare inputs to decoder layers by shifting targets, adding positional
-            # encoding and applying dropout.
-            decoder_inputs = self.embedding_softmax_layer(targets)
-            decoder_inputs = tf.cast(decoder_inputs, FLAGS.transformer_dtype)
-            attention_bias = tf.cast(attention_bias, FLAGS.transformer_dtype)
-            with tf.name_scope("shift_targets"):
-                # Shift targets to the right, and remove the last element
-                decoder_inputs = tf.pad(decoder_inputs,
-                                        [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
-            with tf.name_scope("add_pos_encoding"):
-                length = tf.shape(decoder_inputs)[1]
-                pos_encoding = get_position_encoding(
-                    length, FLAGS.transformer_hidden_size)
-                pos_encoding = tf.cast(pos_encoding, FLAGS.transformer_dtype)
-                decoder_inputs += pos_encoding
-            if training:
-                decoder_inputs = tf.nn.dropout(
-                    decoder_inputs, rate=FLAGS.transformer_layer_postprocess_dropout)
-
-            # Run values
-            decoder_self_attention_bias = get_decoder_self_attention_bias(
-                length, dtype=FLAGS.transformer_dtype)
-            outputs = self.decoder_stack(
-                decoder_inputs,
-                encoder_outputs,
-                decoder_self_attention_bias,
-                attention_bias,
-                training=training)
-            logits = self.embedding_softmax_layer(outputs, mode="linear")
-            logits = tf.cast(logits, tf.float32)
-            return logits
-
-    def _get_symbols_to_logits_fn(self, max_decode_length, training):
-        """Returns a decoding function that calculates logits of the next tokens."""
-
-        timing_signal = get_position_encoding(
-            max_decode_length + 1, FLAGS.transformer_hidden_size)
-        timing_signal = tf.cast(timing_signal, FLAGS.transformer_dtype)
-        decoder_self_attention_bias = get_decoder_self_attention_bias(
-            max_decode_length, dtype=FLAGS.transformer_dtype)
-
-        # TODO(b/139770046): Refactor code with better naming of i.
-        def symbols_to_logits_fn(ids, i, cache):
-            """Generate logits for next potential IDs.
-
-            Args:
-              ids: Current decoded sequences. int tensor with shape [batch_size *
-                beam_size, i + 1].
-              i: Loop index.
-              cache: dictionary of values storing the encoder output, encoder-decoder
-                attention bias, and previous decoder attention values.
-
-            Returns:
-              Tuple of
-                (logits with shape [batch_size * beam_size, vocab_size],
-                 updated cache values)
-            """
-            # Set decoder input to the last generated IDs
-            decoder_input = ids[:, -1:]
-
-            # Preprocess decoder input by getting embeddings and adding timing signal.
-            decoder_input = self.embedding_softmax_layer(decoder_input)
-
-            decoder_input += timing_signal[i:i + 1]
-
-            self_attention_bias = decoder_self_attention_bias[:, :, i:i + 1, :i + 1]
-
-            decoder_outputs = self.decoder_stack(
-                decoder_input,
-                cache.get("encoder_outputs"),
-                self_attention_bias,
-                cache.get("encoder_decoder_attention_bias"),
-                training=training,
-                cache=cache)
-            logits = self.embedding_softmax_layer(decoder_outputs, mode="linear")
-            logits = tf.squeeze(logits, axis=[1])
-            return logits, cache
-
-        return symbols_to_logits_fn
-
-    def predict(self, encoder_outputs, encoder_decoder_attention_bias, training):
-        """Return predicted sequence."""
-        encoder_outputs = tf.cast(encoder_outputs, FLAGS.transformer_dtype)
-        batch_size = tf.shape(encoder_outputs)[0]
-        input_length = tf.shape(encoder_outputs)[1]
-        max_decode_length = input_length + FLAGS.transformer_extra_decode_length
-        encoder_decoder_attention_bias = tf.cast(encoder_decoder_attention_bias, FLAGS.transformer_dtype)
-
-        symbols_to_logits_fn = self._get_symbols_to_logits_fn(
-            max_decode_length, training)
-
-        # Create initial set of IDs that will be passed into symbols_to_logits_fn.
-        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
-
-        # Create cache storing decoder attention values for each layer.
-        # pylint: disable=g-complex-comprehension
-        init_decode_length = 0
-        num_heads = FLAGS.transformer_num_heads
-        dim_per_head = FLAGS.transformer_hidden_size // num_heads
-        cache = {
-            "layer_%d" % layer: {
-                "k":
-                    tf.zeros([
-                        batch_size, init_decode_length, num_heads, dim_per_head
-                    ],
-                        dtype=FLAGS.transformer_dtype),
-                "v":
-                    tf.zeros([
-                        batch_size, init_decode_length, num_heads, dim_per_head
-                    ],
-                        dtype=FLAGS.transformer_dtype)
-            } for layer in range(FLAGS.transformer_num_decoder_layers)
-        }
-        # pylint: enable=g-complex-comprehension
-
-        # Add encoder output and attention bias to the cache.
-        cache["encoder_outputs"] = encoder_outputs
-        cache["encoder_decoder_attention_bias"] = encoder_decoder_attention_bias
-
-        # Use beam search to find the top beam_size sequences and scores.
-        decoded_ids, scores = sequence_beam_search(
-            symbols_to_logits_fn=symbols_to_logits_fn,
-            initial_ids=initial_ids,
-            initial_cache=cache,
-            vocab_size=self.vocab_size,
-            beam_size=FLAGS.transformer_beam_size,
-            alpha=FLAGS.transformer_alpha,
-            max_decode_length=max_decode_length,
-            eos_id=self.reverse_dict['EOS'],
-            dtype=FLAGS.transformer_dtype)
-
-        # Get the top sequence for each batch element
-        top_decoded_ids = decoded_ids[:, 0, 1:]
-        top_scores = scores[:, 0]
-
-        return {"outputs": top_decoded_ids, "scores": top_scores}
