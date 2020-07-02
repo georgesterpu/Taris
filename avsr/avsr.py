@@ -196,7 +196,6 @@ class AVSR(object):
 
             sum_loss = 0.0
             sum_wloss = 0.0
-            num_batches = 0
             start = time.time()
 
             batch_id = 0
@@ -214,14 +213,14 @@ class AVSR(object):
 
                 sum_loss += loss.numpy()
                 sum_wloss += wloss.numpy()
-                num_batches += 1
+
                 print('Batch {}, loss {}'.format(batch_id, loss.numpy()))
 
                 batch_id += 1
 
             print('epoch time: {}'.format(time.time() - start))
-            avg_loss = sum_loss / num_batches
-            avg_wc_loss = sum_wloss / num_batches / FLAGS.wordloss_weight
+            avg_loss = sum_loss / batch_id
+            avg_wc_loss = sum_wloss / batch_id / FLAGS.wordloss_weight
             print('Average epoch loss: {}'.format(avg_loss))
             f.write('Average batch loss at epoch {} is {} (word count loss: {})\n'.format(epoch, avg_loss, avg_wc_loss))
             f.flush()
