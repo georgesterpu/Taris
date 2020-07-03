@@ -258,6 +258,7 @@ class AVSR(object):
             info=self._dataset_info)
 
         pred_output, extra = self.model(data, training=False)
+        extra['losses'] = self.model.losses
         return pred_output, data, extra
 
     def evaluate(
@@ -338,10 +339,10 @@ class AVSR(object):
                     hyp_hist += np.histogram(hyp_lens, bins)[0]
                     ref_hist += np.histogram(ref_lens, bins)[0]
 
-            if isinstance(self.model.losses, list):
-                sum_wloss += self.model.losses[-1].numpy()
+            if isinstance(extra['losses'], list):
+                sum_wloss += extra['losses'][-1].numpy()
             else:
-                sum_wloss += self.model.losses.numpy()
+                sum_wloss += extra['losses'].numpy()
 
             batch_id += 1
 
