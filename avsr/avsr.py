@@ -40,18 +40,17 @@ class AVSR(object):
         self._create_datasets()
         self._create_optimiser()
 
-
     def _create_datasets(self):
         if self.num_streams == 1:
             self._train_dataset, self._dataset_info = make_unimodal_dataset(
-                data_record=self._audio_train_record,
+                data_record=self._video_train_record if FLAGS.input_modality == 'video' else self._audio_train_record,
                 label_record=self._labels_train_record,
                 unit_list_file=FLAGS.unit_list_file,
                 batch_size=FLAGS.batch_size,
                 shuffle=True,
                 bucket_width=45)
             self._test_dataset, self._dataset_info = make_unimodal_dataset(
-                data_record=self._audio_test_record,
+                data_record=self._video_test_record if FLAGS.input_modality == 'video' else self._audio_test_record,
                 label_record=self._labels_test_record,
                 unit_list_file=FLAGS.unit_list_file,
                 batch_size=FLAGS.batch_size,

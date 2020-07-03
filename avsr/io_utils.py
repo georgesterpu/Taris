@@ -171,8 +171,10 @@ def make_unimodal_dataset(
         bucket_width=-1,
         num_cores=4):
 
-    features, features_shape, _ = make_stream_dataset(data_record, num_cores=num_cores)
+    features, features_shape, content_type = make_stream_dataset(data_record, num_cores=num_cores)
     labels = make_labels_dataset(label_record, unit_dict=create_unit_dict(unit_list_file), num_cores=num_cores)
+
+    has_aus = content_type.get('aus', False)
 
     dataset = tf.data.Dataset.zip((features, labels))
 
@@ -180,11 +182,18 @@ def make_unimodal_dataset(
         dataset = dataset.shuffle(buffer_size=FLAGS.buffer_size, reshuffle_each_iteration=True)
 
     def batching_fun(x):
+        if has_aus:
+            input_shape = (tf.TensorShape([None] + features_shape), tf.TensorShape([None, 2]), tf.TensorShape([]),
+                           tf.TensorShape([]))
+        else:
+            input_shape = (tf.TensorShape([None] + features_shape), tf.TensorShape([]), tf.TensorShape([]))
+
+        labels_shape = (tf.TensorShape([None]), tf.TensorShape([]), tf.TensorShape([]), tf.TensorShape([]))
         return x.padded_batch(
             batch_size=batch_size,
             padded_shapes=(
-                (tf.TensorShape([None] + features_shape), tf.TensorShape([]), tf.TensorShape([])),
-                (tf.TensorShape([None]), tf.TensorShape([]), tf.TensorShape([]), tf.TensorShape([]))
+                input_shape,
+                labels_shape
             ), drop_remainder=False,
         )
 
@@ -193,7 +202,7 @@ def make_unimodal_dataset(
     else:
         def key_func(data, _labels):
             # inputs_len = tf.shape(arg1[0])[0]
-            bucket_id = data[1] // bucket_width
+            bucket_id = data[-2] // bucket_width
             # return tf.cast(bucket_id, dtype=tf.int64)
             return bucket_id
 
@@ -205,7 +214,7 @@ def make_unimodal_dataset(
 
     # dataset = dataset.map(lambda x, y: _make_namedtuple(x, y))
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
-    info = {}
+    info = {'has_aus': has_aus}
     return dataset, info
 
 
@@ -235,7 +244,7 @@ def make_bimodal_dataset(
         if _has_aus:
             video_shape = (
                 tf.TensorShape([None] + video_input_shape), tf.TensorShape([None, 2]), tf.TensorShape([]),
-                tf.TensorShape([]),)  # shut up, PEP 8
+                tf.TensorShape([]),)
         else:
             video_shape = (
                 tf.TensorShape([None] + video_input_shape), tf.TensorShape([]), tf.TensorShape([]),)
@@ -272,6 +281,11 @@ def make_bimodal_dataset(
 
 def structure_data(batch, num_streams=1, info=None):
 
+    payload = {}
+    has_aus = info.get('has_aus', False)
+    if has_aus:
+        payload['aus'] = batch[0][1]
+
     if num_streams == 1:
         float_data = batch[0][0]
         # if FLAGS.transformer_dtype == 'float16':
@@ -293,18 +307,14 @@ def structure_data(batch, num_streams=1, info=None):
 
         return BatchedData(
             inputs=float_data,
-            inputs_length=tf.cast(batch[0][1], tf.int32),
-            inputs_filenames=batch[0][2],
+            inputs_length=tf.cast(batch[0][-2], tf.int32),
+            inputs_filenames=batch[0][-1],
             labels=tf.cast(batch[1][0], tf.int32),
             labels_length=tf.cast(batch[1][1], tf.int32),
             labels_filenames=batch[1][2],
-            payload=tf.zeros(0),
+            payload=payload,
         )
     elif num_streams == 2:
-        payload = {}
-        has_aus = info.get('has_aus', False)
-        if has_aus:
-            payload['aus'] = batch[0][1]
 
         return BatchedData(
             inputs=(batch[0][0], batch[1][0]),
