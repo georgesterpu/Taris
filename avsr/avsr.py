@@ -287,6 +287,7 @@ class AVSR(object):
             return iterator.__next__()
 
         batch_id = 0
+        sum_wloss = 0.0
         while True:
             print(batch_id)
 
@@ -337,6 +338,11 @@ class AVSR(object):
                     hyp_hist += np.histogram(hyp_lens, bins)[0]
                     ref_hist += np.histogram(ref_lens, bins)[0]
 
+            if isinstance(self.model.losses, list):
+                sum_wloss += self.model.losses[-1].numpy()
+            else:
+                sum_wloss += self.model.losses.numpy()
+
             batch_id += 1
 
         uer, uer_dict = compute_wer(predictions_dict, labels_dict)
@@ -348,6 +354,7 @@ class AVSR(object):
             plot_histograms(
                 hyp_hist, ref_hist, bins,
                 fname=path.join(outdir, 'segmentations', FLAGS.logfile, iteration_name, 'word_hists_{}.png'.format(epoch)))
+        error_rate['word_loss'] = sum_wloss / batch_id / FLAGS.wordloss_weight
 
         log_outdir = path.join('./predictions', FLAGS.logfile, iteration_name)
         makedirs(log_outdir, exist_ok=True)
