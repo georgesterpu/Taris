@@ -76,8 +76,10 @@ def avsr_flags():
     flags.DEFINE_boolean('transformer_online_decoder', False, 'Wheter or not to use online decoding')
     flags.DEFINE_integer('transformer_decoder_lookahead', 5, 'Number of segments for cross-modal attention lookahead')
     flags.DEFINE_integer('transformer_decoder_lookback', 5, 'Number of segments for cross-modal attention lookback')
-    ## Experimental flags
+    flags.DEFINE_float('transformer_l1_regularisation', 0.0, 'Transformer L1 weight regularisation')
+    flags.DEFINE_float('transformer_l2_regularisation', 0.0001, 'Transformer L2 weight regularisation')
 
+    ## Experimental flags
     flags.DEFINE_integer('transformer_num_avalign_layers', 1, 'Number of layers in the AVAlign stack')
     flags.DEFINE_boolean('au_loss', False, 'Use the Action Unit Loss for multimodal encoders')
     flags.DEFINE_float('au_loss_weight', 10.0, 'Scalar multiplier of the AU loss')

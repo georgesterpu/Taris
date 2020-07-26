@@ -99,7 +99,7 @@ class AVSR(object):
         batch, is_done = advance_iterator(iterator)
 
         if is_done:
-            return 0., 0., True
+            return 0., 0., 0., True
         data = structure_data(
                     batch,
                     num_streams=self.num_streams,
@@ -124,7 +124,7 @@ class AVSR(object):
         grads_and_vars = zip(clipped_grads, self.model.trainable_variables)
         self.optimiser.apply_gradients(grads_and_vars)
 
-        return loss, extra_loss, False
+        return loss, extra_loss, norm, False
 
     def train(
             self,
@@ -194,7 +194,7 @@ class AVSR(object):
         for epoch in range(last_epoch + 1, target_epoch + 1):
 
             sum_loss = 0.0
-            sum_wloss = 0.0
+            sum_extraloss = 0.0
             start = time.time()
 
             batch_id = 0
@@ -203,30 +203,30 @@ class AVSR(object):
             while True:
                 if FLAGS.use_tensorboard:
                     with writer.as_default():
-                        loss, wloss, is_done = self._train_step(iterator)
+                        loss, eloss, global_norm, is_done = self._train_step(iterator)
                 else:
-                    loss, wloss, is_done = self._train_step(iterator)
+                    loss, eloss, global_norm, is_done = self._train_step(iterator)
 
                 if is_done:
                     break
 
                 sum_loss += loss.numpy()
-                sum_wloss += wloss.numpy()
+                sum_extraloss += eloss.numpy()
 
-                print('Batch {}, loss {}'.format(batch_id, loss.numpy()))
+                print('Batch {}, loss {:.3f}, grad norm: {:.3f}'.format(batch_id, loss.numpy(), global_norm.numpy()))
 
                 batch_id += 1
 
-            print('epoch time: {}'.format(time.time() - start))
+            print('epoch time: {:.3f}'.format(time.time() - start))
             avg_loss = sum_loss / batch_id
-            avg_wc_loss = sum_wloss / batch_id / FLAGS.wordloss_weight
+            avg_eloss = sum_extraloss / batch_id
             print('Average epoch loss: {}'.format(avg_loss))
-            f.write('Average batch loss at epoch {} is {} (word count loss: {})\n'.format(epoch, avg_loss, avg_wc_loss))
+            f.write('Average batch loss at epoch {} is {} (extra loss: {})\n'.format(epoch, avg_loss, avg_eloss))
             f.flush()
             if FLAGS.use_tensorboard:
                 with writer.as_default():
                     tf.summary.scalar('Average Batch loss', avg_loss, step=self.optimiser.iterations.numpy())
-                    tf.summary.scalar('Average Word Count loss', avg_wc_loss, step=self.optimiser.iterations.numpy())
+                    tf.summary.scalar('Average Extra loss', avg_eloss, step=self.optimiser.iterations.numpy())
 
             if epoch % 10 == 0:
                 save_path = checkpoint_manager.save(checkpoint_number=epoch)
@@ -338,10 +338,11 @@ class AVSR(object):
                     hyp_hist += np.histogram(hyp_lens, bins)[0]
                     ref_hist += np.histogram(ref_lens, bins)[0]
 
-            if isinstance(extra['losses'], list):
-                sum_wloss += extra['losses'][-1].numpy()
+            if len(extra['losses']) > 0 and FLAGS.word_loss:
+                wloss_idx = 0 + FLAGS.au_loss
+                sum_wloss += extra['losses'][wloss_idx].numpy()
             else:
-                sum_wloss += extra['losses'].numpy()
+                sum_wloss += 0.0
 
             batch_id += 1
 

@@ -71,9 +71,19 @@ class Transformer(tf.keras.Model):
             self.wb_activation = tf.math.sigmoid
 
     def build(self, input_shape):
-        self.input_dense_layer = tf.keras.layers.Dense(units=FLAGS.transformer_hidden_size)
+        self.input_dense_layer = tf.keras.layers.Dense(
+            units=FLAGS.transformer_hidden_size,
+            kernel_regularizer=tf.keras.regularizers.l1_l2(
+                l1=FLAGS.transformer_l1_regularisation,
+                l2=FLAGS.transformer_l2_regularisation),
+            )
         if self.use_word_loss or FLAGS.transformer_online_decoder:
-            self.gate = tf.keras.layers.Dense(1, activation=self.wb_activation)
+            self.gate = tf.keras.layers.Dense(
+                units=1,
+                kernel_regularizer=tf.keras.regularizers.l1_l2(
+                    l1=FLAGS.transformer_l1_regularisation,
+                    l2=FLAGS.transformer_l2_regularisation),
+                activation=self.wb_activation)
 
     def call(self, inputs, training):
         """Calculate target logits or inferred target sequences.

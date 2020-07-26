@@ -190,6 +190,9 @@ class Dense3D(tf.keras.layers.Layer):
             shape=kernel_shape,
             initializer=self.kernel_initializer,
             dtype=self.dtype,
+            regularizer=tf.keras.regularizers.l1_l2(
+                l1=FLAGS.transformer_l1_regularisation,
+                l2=FLAGS.transformer_l2_regularisation),
             trainable=True)
         if self.use_bias:
             self.bias = self.add_weight(
@@ -250,9 +253,16 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
             self.filter_size,
             use_bias=True,
             activation=tf.nn.relu,
+            kernel_regularizer=tf.keras.regularizers.l1_l2(
+                l1=FLAGS.transformer_l1_regularisation,
+                l2=FLAGS.transformer_l2_regularisation),
             name="filter_layer")
         self.output_dense_layer = tf.keras.layers.Dense(
-            self.hidden_size, use_bias=True, name="output_layer")
+            self.hidden_size, use_bias=True,
+            kernel_regularizer=tf.keras.regularizers.l1_l2(
+                l1=FLAGS.transformer_l1_regularisation,
+                l2=FLAGS.transformer_l2_regularisation),
+            name="output_layer")
         super(FeedForwardNetwork, self).build(input_shape)
 
     def get_config(self):
