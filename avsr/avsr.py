@@ -347,10 +347,14 @@ class AVSR(object):
             batch_id += 1
 
         uer, uer_dict = compute_wer(predictions_dict, labels_dict)
-        error_rate = {FLAGS.unit: uer * 100}
+        error_rate = {
+            FLAGS.unit: uer * 100,
+            FLAGS.unit + '_stdev': np.std(list(uer_dict.values()), ddof=1) * 100
+        }
         if FLAGS.unit == 'character':
             wer, wer_dict = compute_wer(predictions_dict, labels_dict, split_words=True)
             error_rate['word'] = wer * 100
+            error_rate['word_stdev'] = np.std(list(wer_dict.values()), ddof=1) * 100
         if bool(tmp_dict):
             plot_histograms(
                 hyp_hist, ref_hist, bins,
