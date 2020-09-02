@@ -48,10 +48,14 @@ is set to `False`. Please ensure that `--architecture=av_transformer`.
 
 ##### Data preparation
 
-Please see the example script `write_records.py`
+<!-- Please see the example script `write_records.py` -->
 
-For AVSR experiments it is required to process your video clips in advance with the TadasBaltrusaitis/OpenFace tool.
-Please refer to the example script `extract_faces.py`.
+<!-- For AVSR experiments it is required to process your video clips in advance with the TadasBaltrusaitis/OpenFace tool. -->
+
+<!-- Please refer to the example script `extract_faces.py`. -->
+
+Please use the [avsr-tf1](https://github.com/georgesterpu/avsr-tf1) project to prepare your data.
+I will port the data preparation pipeline to TensorFlow 2 later this year, once I finish writing my thesis.
 
 ### References
 
