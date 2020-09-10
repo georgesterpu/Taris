@@ -732,8 +732,7 @@ class AVTransformer(Transformer):
             fused_encoder_outputs = self.align_stack(
                 audio_encoder_outputs,
                 video_memory=video_encoder_outputs,
-                attention_bias=video_attention_bias,
-                # attention_bias=get_bias_from_len(video_len),
+                attention_bias=get_bias_from_len(video_len),
                 training=training)
 
             if self.use_word_loss or FLAGS.transformer_online_decoder:
