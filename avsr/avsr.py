@@ -358,7 +358,7 @@ class AVSR(object):
         if bool(tmp_dict):
             plot_histograms(
                 hyp_hist, ref_hist, bins,
-                fname=path.join(outdir, 'segmentations', FLAGS.logfile, iteration_name, 'word_hists_{}.png'.format(epoch)))
+                fname=path.join(outdir, 'segmentations', FLAGS.logfile, iteration_name, 'word_hists_{}.pdf'.format(epoch)))
         error_rate['word_loss'] = sum_wloss / batch_id / FLAGS.wordloss_weight
 
         log_outdir = path.join('./predictions', FLAGS.logfile, iteration_name)
