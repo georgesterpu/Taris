@@ -4,8 +4,7 @@ from .audio import process_audio, read_wav_file, read_mp4_audio_file
 from os import path, makedirs
 import glob
 from imageio import imread
-#import cv2
-import librosa
+import cv2
 from .awgn import cache_noise, add_noise_cached
 
 
@@ -130,7 +129,7 @@ class RecordFileWriter(object):
 
         for idx, record in enumerate([train_record_name, test_record_name]):
             makedirs(path.dirname(record), exist_ok=True)
-            writer = tf.python_io.RecordFileWriter(record)
+            writer = tf.io.TFRecordWriter(record)
 
             for file in files[idx]:
                 # TODO add progress info
@@ -168,7 +167,7 @@ class RecordFileWriter(object):
 
         for idx, record in enumerate([train_record_name, test_record_name]):
             makedirs(path.dirname(record), exist_ok=True)
-            writer = tf.python_io.RecordFileWriter(record)
+            writer = tf.io.TFRecordWriter(record)
 
             for file in files[idx]:
                 # TODO add progress info
