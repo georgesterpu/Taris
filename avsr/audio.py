@@ -26,7 +26,7 @@ def process_audio(wav, params):
 
     )
     logspec = np.log(spec + 1e-6)
-    return logspec
+    return np.transpose(logspec)
 
 
 def read_wav_file(file, sr=16000):
