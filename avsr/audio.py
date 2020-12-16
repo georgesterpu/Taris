@@ -44,3 +44,12 @@ def read_wav_file(file, sr=16000):
     """
     data, sr = librosa.load(file, sr)
     return np.expand_dims(data, axis=-1)
+
+
+def read_mp4_audio_file(file, sr=16000):
+    data, native_sr = librosa.core.audio.__audioread_load(file, offset=0.0, duration=None, dtype=np.float32)
+
+    if sr != native_sr:
+        data = librosa.resample(data, native_sr, sr, res_type="kaiser_best")
+
+    return np.expand_dims(data, axis=-1)

@@ -1,10 +1,10 @@
 import tensorflow as tf
 import numpy as np
-from .audio import process_audio, read_wav_file
+from .audio import process_audio, read_wav_file, read_mp4_audio_file
 from os import path, makedirs
 import glob
 from imageio import imread
-import cv2
+#import cv2
 import librosa
 from .awgn import cache_noise, add_noise_cached
 
@@ -88,7 +88,7 @@ class RecordFileWriter(object):
                     record_name = path.join(record + '_' + str(snr) + '.tfrecord', )
                 else:
                     record_name = path.join(record + '_' + noise_type + '_' + str(snr) + 'db.tfrecord', )
-                writers.append(tf.python_io.RecordFileWriter(record_name))
+                writers.append(tf.io.TFRecordWriter(record_name))
 
             for file in files[idx]:
                 print(file)
@@ -215,6 +215,8 @@ def _create_unit_dict(unit_list_file):
 
 def _symbols_to_ints(symbols, unit_dict):
 
+    #if isinstance(symbols, str):
+    #    symbols = symbols.split()
     ints = [unit_dict[symbol] for symbol in symbols]
     return np.asarray(ints, dtype=np.int32)
 
@@ -259,8 +261,10 @@ def _bytes_feature_list(values_list):
 
 
 def read_data_file(file, extension, sr=None):
-    if extension in ('wav', 'mp4', 'WAV', 'flac'):
+    if extension.lower() in ('wav', 'flac'):
         contents = read_wav_file(file + '.' + extension, sr=sr)
+    elif extension.lower() in ('mp4', ):
+        contents = read_mp4_audio_file(file + '.' + extension, sr=sr)
     else:
         raise Exception('unknown file type/extension')
 
