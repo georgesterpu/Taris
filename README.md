@@ -48,14 +48,17 @@ is set to `False`. Please ensure that `--architecture=av_transformer`.
 
 ##### Data preparation
 
-<!-- Please see the example script `write_records.py` -->
+Our published articles used the legacy [avsr-tf1](https://github.com/georgesterpu/avsr-tf1) project for data preparation.
+\
+The most notable change in Taris is the audio spectrogram processing with `librosa` as opposed to the native TensorFlow signal processing API. 
+Therefore, this repository provides **experimental** support only, and has not been validated thoroughly. 
 
-<!-- For AVSR experiments it is required to process your video clips in advance with the TadasBaltrusaitis/OpenFace tool. -->
 
-<!-- Please refer to the example script `extract_faces.py`. -->
+Please see the example script `write_records.py`
 
-Please use the [avsr-tf1](https://github.com/georgesterpu/avsr-tf1) project to prepare your data.
-I will port the data preparation pipeline to TensorFlow 2 later this year, once I finish writing my thesis.
+For AVSR experiments it is required to process your video clips in advance with the TadasBaltrusaitis/OpenFace tool.
+\
+Please refer to the example script `extract_faces.py`.
 
 ### References
 
@@ -93,3 +96,6 @@ imageio (AVSR)
 cv2 (AVSR)
 TadasBaltrusaitis/OpenFace (AVSR)
 ```
+Please use the latest versions available on your platform, and let me know of any breakings and deprecations.
+\
+This project is actively maintained.
