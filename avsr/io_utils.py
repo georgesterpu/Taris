@@ -331,7 +331,7 @@ def structure_data(batch, num_streams=1, info=None):
 
 
 def advance_iterator(iterator):
-    optional = tf.data.experimental.get_next_as_optional(iterator)
+    optional = iterator.get_next_as_optional()
 
     def empty_or_zeros(shape, dtype):
         empty_shape = [0 if s is None else s for s in shape]
