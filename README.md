@@ -85,7 +85,7 @@ Under review\
 
 ### Dependencies
 ```
-tensorflow >= 2.0
+tensorflow >= 2.4
 tensorflow_addons
 matplotlib
 ```
