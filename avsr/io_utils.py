@@ -341,7 +341,11 @@ def advance_iterator(iterator):
         batch = optional.get_value()
         is_done = False
     else:
-        batch = tf.nest.map_structure(empty_or_zeros, iterator.output_shapes, iterator.output_types)
+        batch = tf.nest.map_structure(
+            empty_or_zeros,
+            tf.compat.v1.data.get_output_shapes(iterator),
+            tf.compat.v1.data.get_output_types(iterator)
+        )
         is_done = True
 
     return batch, is_done
