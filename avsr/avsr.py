@@ -228,7 +228,7 @@ class AVSR(object):
                     tf.summary.scalar('Average Batch loss', avg_loss, step=self.optimiser.iterations.numpy())
                     tf.summary.scalar('Average Extra loss', avg_eloss, step=self.optimiser.iterations.numpy())
 
-            if epoch % 10 == 0:
+            if epoch % 20 == 0:
                 save_path = checkpoint_manager.save(checkpoint_number=epoch)
                 error_rate = self.evaluate(checkpoint_path=save_path, epoch=epoch, iteration_name=iteration_name)
                 for (k, v) in error_rate.items():
@@ -244,6 +244,42 @@ class AVSR(object):
             tf.summary.trace_export(name='run1', profiler_outdir='/tmp/tf_profile/')
 
         return save_path
+
+    def optuna_train(
+            self,
+            target_epoch,
+            learning_rate,
+    ):
+        lr_schedule = LearningRateSchedule(
+            initial_learning_rate=learning_rate,
+            warmup_steps=FLAGS.lr_warmup_steps,
+            initial_global_step=self.optimiser.iterations.numpy())
+        self.optimiser.learning_rate = lr_schedule
+
+        avg_loss = 1337.42
+
+        for epoch in range(target_epoch):
+
+            sum_loss = 0.0
+            sum_extraloss = 0.0
+
+            batch_id = 0
+            iterator = self._train_dataset.__iter__()
+
+            while True:
+                loss, eloss, global_norm, is_done = self._train_step(iterator)
+                if is_done:
+                    break
+
+                sum_loss += loss.numpy()
+                sum_extraloss += eloss.numpy()
+
+                batch_id += 1
+
+            avg_loss = sum_loss / batch_id
+            # avg_eloss = sum_extraloss / batch_id
+
+        return avg_loss
 
     @tf.function
     def _evaluate_step(self, next_fun):
@@ -333,7 +369,7 @@ class AVSR(object):
                     x, y = get_segmentation_timestamps(cumsum)
                     write_praat_intensity(x, y, fname.replace('_tmp', '_cumsum'))
 
-                    ## TODO
+                    # TODO
                     tmp_dict[file], hyp_lens, ref_lens = gen_len_hists(file, x, y)
                     hyp_hist += np.histogram(hyp_lens, bins)[0]
                     ref_hist += np.histogram(ref_lens, bins)[0]
