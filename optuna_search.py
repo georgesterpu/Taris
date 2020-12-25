@@ -3,13 +3,10 @@ from absl import app, flags
 from avsr import utils
 import optuna
 from avsr import AVSR
+import logging
 
 FLAGS = flags.FLAGS
 
-
-def objective(trial):
-    wloss_weight = trial.suggest_uniform("wloss_weight", 0.0, 1.0)
-    return wloss_weight
 
 def main(argv):
 
@@ -39,8 +36,21 @@ def main(argv):
         acc = inst.optuna_train(target_epoch=20, learning_rate=0.001)
         return acc
 
-    study = optuna.create_study()
-    study.optimize(experiment, n_trials=100, show_progress_bar=True)
+    init_logging()
+    study = optuna.create_study(study_name='wloss')
+    logging.info('Start of Study')
+    study.optimize(experiment, n_trials=100)
+    logging.info('End of Study')
+
+
+def init_logging():
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.INFO)  # Setup the root logger.
+    logger.addHandler(logging.FileHandler("./logs/" + FLAGS.logfile + ".log", mode="w"))
+
+    optuna.logging.enable_propagation()  # Propagate logs to the root logger.
+    optuna.logging.disable_default_handler()  # Stop showing logs in sys.stderr.
 
 
 if __name__ == '__main__':
