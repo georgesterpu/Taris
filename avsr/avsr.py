@@ -116,7 +116,9 @@ class AVSR(object):
             if FLAGS.transformer_dtype == 'float16':
                 loss = self.optimiser.get_scaled_loss(loss)
 
-        tvars = list({id(v): v for v in self.model.trainable_variables}.values())
+        # Legacy bug fix for duplicated variable names
+        # tvars = list({id(v): v for v in self.model.trainable_variables}.values())
+        tvars = self.model.trainable_variables
         grads = tape.gradient(loss, tvars)
         if FLAGS.transformer_dtype == 'float16':
             grads = self.optimiser.get_unscaled_gradients(grads)
