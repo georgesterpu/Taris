@@ -60,7 +60,7 @@ class Transformer(tf.keras.Model):
 
         if FLAGS.architecture == 'transformer':
             # is it worth it to specialise this class for single input modalities ?
-            self.encoder_stack = EncoderStack()
+            self.encoder_stack = EncoderStack('audio_encoder')
             self.decoder_stack = DecoderStack()
 
         if FLAGS.wb_activation == 'sigmoid':
@@ -418,9 +418,10 @@ class EncoderStack(tf.keras.layers.Layer):
       2. Feedforward network (which is 2 fully-connected layers)
     """
 
-    def __init__(self):
+    def __init__(self, name='encoder_stack'):
         super(EncoderStack, self).__init__()
         self.layers = []
+        self._name = name
 
     def build(self, input_shape):
         """Builds the encoder stack."""
@@ -633,8 +634,8 @@ class AVTransformer(Transformer):
         # The super class won't instantiate its encode/decode stacks
         # but maybe there is a better design without overdoing abstractions
         # e.g. can these be moved to build() ?
-        self.audio_encoder_stack = EncoderStack()
-        self.video_encoder_stack = EncoderStack()
+        self.audio_encoder_stack = EncoderStack('audio_encoder')
+        self.video_encoder_stack = EncoderStack('video_encoder')
         self.video_cnn = VideoCNN(
             cnn_filters=FLAGS.cnn_filters,
             cnn_dense_units=FLAGS.cnn_dense_units,
