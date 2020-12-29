@@ -73,7 +73,7 @@ class Transformer(tf.keras.Model):
     def build(self, input_shape):
         self.input_dense_layer = tf.keras.layers.Dense(
             units=FLAGS.transformer_hidden_size,
-            name='input_dense',
+            name='audio_input_dense',
             )
         if self.use_word_loss or FLAGS.transformer_online_decoder:
             self.gate = tf.keras.layers.Dense(
@@ -648,7 +648,7 @@ class AVTransformer(Transformer):
     def build(self, input_shape):
         self.input_dense_layer = tf.keras.layers.Dense(
             units=FLAGS.transformer_hidden_size,
-            name='input_dense')
+            name='audio_input_dense')
         if self.use_au_loss:
             self.au_layer = tf.keras.layers.Dense(units=2, activation='sigmoid', name='au_layer')
             self.mse = tf.keras.losses.MeanSquaredError()
