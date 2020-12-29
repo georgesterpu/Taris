@@ -73,11 +73,13 @@ class Transformer(tf.keras.Model):
     def build(self, input_shape):
         self.input_dense_layer = tf.keras.layers.Dense(
             units=FLAGS.transformer_hidden_size,
+            name='input_dense',
             )
         if self.use_word_loss or FLAGS.transformer_online_decoder:
             self.gate = tf.keras.layers.Dense(
                 units=1,
-                activation=self.wb_activation)
+                activation=self.wb_activation,
+                name='word_gate')
 
     def call(self, inputs, training):
         """Calculate target logits or inferred target sequences.
@@ -644,12 +646,14 @@ class AVTransformer(Transformer):
         self.decoder_stack = DecoderStack()
 
     def build(self, input_shape):
-        self.input_dense_layer = tf.keras.layers.Dense(units=FLAGS.transformer_hidden_size)
+        self.input_dense_layer = tf.keras.layers.Dense(
+            units=FLAGS.transformer_hidden_size,
+            name='input_dense')
         if self.use_au_loss:
-            self.au_layer = tf.keras.layers.Dense(units=2, activation='sigmoid')
+            self.au_layer = tf.keras.layers.Dense(units=2, activation='sigmoid', name='au_layer')
             self.mse = tf.keras.losses.MeanSquaredError()
         if self.use_word_loss or FLAGS.transformer_online_decoder:
-            self.gate = tf.keras.layers.Dense(1, activation='sigmoid')
+            self.gate = tf.keras.layers.Dense(1, activation='sigmoid', name='word_gate')
 
     def call(self, inputs, training):
         """Calculate target logits or inferred target sequences.
