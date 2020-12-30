@@ -5,7 +5,7 @@ from os import path, makedirs
 import numpy as np
 import time
 from .loss import make_loss as loss_fn, regularisation_loss
-from .optimiser import LearningRateSchedule
+from .optimiser import LearningRateSchedule, init_optimiser
 from .visualise.segmentation import get_segmentation_timestamps, write_praat_intensity, \
     gen_len_hists, plot_histograms, average_dict_values
 
@@ -123,7 +123,7 @@ class AVSR(object):
         if FLAGS.transformer_dtype == 'float16':
             grads = self.optimiser.get_unscaled_gradients(grads)
         clipped_grads, norm = tf.clip_by_global_norm(grads, FLAGS.max_gradient_norm)
-        grads_and_vars = zip(clipped_grads, self.model.trainable_variables)
+        grads_and_vars = zip(clipped_grads, tvars)
         self.optimiser.apply_gradients(grads_and_vars)
 
         return loss, extra_loss, norm, False
@@ -411,29 +411,7 @@ class AVSR(object):
         return error_rate
 
     def _create_optimiser(self):
-        if FLAGS.optimiser == 'lamb':
-            import tensorflow_addons as tfa
-            self.optimiser = tfa.optimizers.LAMB(
-                learning_rate=0.0,
-            )
-        elif FLAGS.optimiser == 'radam':
-            import tensorflow_addons as tfa
-            self.optimiser = tfa.optimizers.RectifiedAdam(
-                learning_rate=0.0,
-            )
-        elif FLAGS.optimiser == 'lookahead_radam':
-            import tensorflow_addons as tfa
-            optimiser = tfa.optimizers.RectifiedAdam(
-                learning_rate=0.0)
-            self.optimiser = tfa.optimizers.Lookahead(optimiser)
-        else:
-            self.optimiser = tf.keras.optimizers.Adam(
-                learning_rate=0.0,  # safety measure
-                # clipnorm=FLAGS.max_gradient_norm,  # wait for upstream fix
-                amsgrad=FLAGS.amsgrad,
-                beta_1=0.9,
-                beta_2=0.999,
-                epsilon=1e-7)
+        self.optimiser = init_optimiser(FLAGS.optimiser)
 
         if FLAGS.transformer_dtype == 'float16':
             self.policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')

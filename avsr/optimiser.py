@@ -1,4 +1,8 @@
 import tensorflow as tf
+import tensorflow_addons as tfa
+from absl import flags
+
+FLAGS = flags.FLAGS
 
 
 class LearningRateSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -44,3 +48,34 @@ class LearningRateSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
             'initial_learning_rate': self.initial_learning_rate,
             'warmup_steps': self.warmup_steps,
         }
+
+
+def init_optimiser(name):
+    if name == 'lamb':
+        optimiser = tfa.optimizers.LAMB(
+            learning_rate=0.0,
+        )
+    elif name == 'novograd':
+        optimiser = tfa.optimizers.NovoGrad(
+            learning_rate=0.0,
+        )
+    elif name == 'radam':
+        optimiser = tfa.optimizers.RectifiedAdam(
+            learning_rate=0.0,
+        )
+    elif name == 'lookahead_radam':
+        optimiser = tfa.optimizers.RectifiedAdam(
+            learning_rate=0.0)
+        optimiser = tfa.optimizers.Lookahead(optimiser)
+    elif name == 'adam':
+        optimiser = tf.keras.optimizers.Adam(
+            learning_rate=0.0,  # safety measure
+            # clipnorm=FLAGS.max_gradient_norm,  # wait for upstream fix
+            amsgrad=FLAGS.amsgrad,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-7)
+    else:
+        raise ValueError('Unknown optimiser: {}'.format(name))
+
+    return optimiser
