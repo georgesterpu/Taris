@@ -43,7 +43,7 @@ Relevant system flags are:
 + `--transformer_decoder_lookback (default: 5)`
 
 The script `run_audiovisual.py` launches audio-visual experiments implementing the AV Align strategy with a Transformer,
-reproducing the work in [4]. By default, the Action Unit regularisation loss, controlled by the `--au_loss` flag,
+reproducing the work in [4, 5]. By default, the Action Unit regularisation loss, controlled by the `--au_loss` flag,
 is set to `False`. Please ensure that `--architecture=av_transformer`.
 
 ##### Data preparation
@@ -64,7 +64,7 @@ Please refer to the example script `extract_faces.py`.
 
 [1] Learning to Count Words in Fluent Speech enables Online Speech Recognition\
 George Sterpu, Christian Saam, Naomi Harte\
-Under review\
+IEEE Spoken Language Technology Workshop (SLT 2021).\
 [[arXiv](https://arxiv.org/abs/2006.04928)]
 
 [2] How to Teach DNNs to Pay Attention to the Visual Modality in Speech Recognition\
@@ -80,8 +80,14 @@ in ICMI 2018\
 [4] Should we hard-code the recurrence concept or learn it instead ?
 Exploring the Transformer architecture for Audio-Visual Speech Recognition \
 George Sterpu, Christian Saam, Naomi Harte\
-Under review\
+Interspeech 2020\
 [[arXiv](https://arxiv.org/abs/2005.09297)]
+
+[5] AV Taris: Online Audio-Visual Speech Recognition\
+George Sterpu and Naomi Harte\
+Under Review
+[[arXiv](https://arxiv.org/abs/2012.07467)]
+
 
 ### Dependencies
 ```
